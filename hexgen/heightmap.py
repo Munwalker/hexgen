@@ -52,9 +52,9 @@ class Heightmap:
         """ fix the sides of the map """
         if self.grid[x][y] == 0:
             d = math.fabs(xa - xb) + math.fabs(ya - yb)
-            ROUGHNESS = self.params.get('roughness')
+            roughness = self.params.get('roughness')
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
-                + (random.random() - 0.5) * d * ROUGHNESS
+                + (random.random() - 0.5) * d * roughness
             c = int(math.fabs(v) % 257)
             if y == 0:
                 self.grid[x][self.size - 1] = c
