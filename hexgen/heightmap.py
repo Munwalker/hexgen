@@ -2,18 +2,28 @@ import math
 import random
 import numpy as np
 
+
 class Heightmap:
+    """
+    Generate a heightmap using Diamond-square algorithm.
+    :param params: generator parameters (used here : size, sea_percent, height_range, roughness)
+    :return: True or False on success
+    """
 
     def __init__(self, params, debug=False):
         self.params = params
 
         # start making the heightmap
-        self.size = params.get('size')
+        self.size = self.params.get('size')
+        # get the grid (size*size) full of 0
         self.grid = np.zeros((self.size, self.size))
+
+        # initialize corners of the world
         self.grid[0][0] = random.randint(0, 255)
         self.grid[self.size - 1][0] = random.randint(0, 255)
         self.grid[0][self.size - 1] = random.randint(0, 255)
         self.grid[self.size - 1][self.size - 1] = random.randint(0, 255)
+
         self._subdivide(0, 0, self.size - 1, self.size - 1)
 
         # compute average and record top height
@@ -26,7 +36,7 @@ class Heightmap:
         self.highest_height = max(m)
         self.lowest_height = min(m)
         self.average_height = sum(avg) / float(len(avg))
-        sea_percent = params.get('sea_percent')
+        sea_percent = self.params.get('sea_percent')
         self.sealevel = round(self.average_height * (sea_percent * 2 / 100))
 
         if sea_percent == 100:
@@ -35,7 +45,6 @@ class Heightmap:
         if debug:
             print("Sea level at {} or {}%".format(self.sealevel, sea_percent))
 
-
     def height_at(self, x, y):
         return self.grid[x][y]
 
@@ -43,9 +52,9 @@ class Heightmap:
         """ fix the sides of the map """
         if self.grid[x][y] == 0:
             d = math.fabs(xa - xb) + math.fabs(ya - yb)
-            ROUGHNESS = self.params.get('roughness')
+            roughness = self.params.get('roughness')
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
-                + (random.random() - 0.5) * d * ROUGHNESS
+                + (random.random() - 0.5) * d * roughness
             c = int(math.fabs(v) % 257)
             if y == 0:
                 self.grid[x][self.size - 1] = c
@@ -60,11 +69,13 @@ class Heightmap:
             self.grid[x][y] = c
 
     def _subdivide(self, x1, y1, x2, y2):
-        """ subdivide the heightmap iterate """
+        """ subdivide the heightmap iterate (diamond square algorithm) """
+        # coordinates of central point
         if not ((x2 - x1 < 2.0) and (y2 - y1 < 2.0)):
             x = int((x1 + x2) / 2)
             y = int((y1 + y2) / 2)
 
+            # average height of given points
             v = int((self.grid[x1][y1] + self.grid[x2][y1] +
                      self.grid[x2][y2] + self.grid[x1][y2]) / 4)
             range_low, range_high = self.params.get('height_range')
