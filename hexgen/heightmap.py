@@ -14,7 +14,7 @@ class Heightmap:
         self.params = params
 
         # start making the heightmap
-        self.size = params.get('size')
+        self.size = self.params.get('size')
         # get the grid (size*size) full of 0
         self.grid = np.zeros((self.size, self.size))
 
@@ -36,7 +36,7 @@ class Heightmap:
         self.highest_height = max(m)
         self.lowest_height = min(m)
         self.average_height = sum(avg) / float(len(avg))
-        sea_percent = params.get('sea_percent')
+        sea_percent = self.params.get('sea_percent')
         self.sealevel = round(self.average_height * (sea_percent * 2 / 100))
 
         if sea_percent == 100:
