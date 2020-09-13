@@ -62,12 +62,14 @@ class Heightmap:
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
                 + (random.random() - 0.5) * d * roughness
             c = int(math.fabs(v)) # % 256)
+
             # Acceleration : avoid calculates twice
-            if y == 0:
-                self.grid[x][self.size - 1] = c
-            if x == 0 or x == self.size - 1:
-                if y < self.size - 1:
-                    self.grid[x][self.size - 1 - y] = c
+            # if y == 0:
+            #     self.grid[x][self.size - 1] = c
+            # if x == 0 or x == self.size - 1:
+            #     if y < self.size - 1:
+            #         self.grid[x][self.size - 1 - y] = c
+
             # ensure height is in given range
             range_low, range_high = self.params.get('height_range')
             c = max(range_low, c)
