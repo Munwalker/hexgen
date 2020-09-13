@@ -43,19 +43,25 @@ class Heightmap:
             self.sealevel = 255
 
         if debug:
-            print("Sea level at {} or {}%".format(self.sealevel, sea_percent))
+            print(f"Sea level at {self.sealevel} or {sea_percent}")
 
     def height_at(self, x, y):
         return self.grid[x][y]
 
     def _adjust(self, xa, ya, x, y, xb, yb):
-        """ fix the sides of the map """
+        """ fix the middle if the border
+        xa;ya   -      ?x;y?      -       xb;yb
+        """
         if self.grid[x][y] == 0:
+            # d is the distance between the 2 known points.
+            # the greater it is the more difference it can have from the height average of the 2 points.
             d = math.fabs(xa - xb) + math.fabs(ya - yb)
             roughness = self.params.get('roughness')
+            # height = average of the 2 known points * random negative or positive * d * world roughness
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
                 + (random.random() - 0.5) * d * roughness
             c = int(math.fabs(v) % 257)
+            # Acceleration : avoid calculates twice
             if y == 0:
                 self.grid[x][self.size - 1] = c
             if x == 0 or x == self.size - 1:
@@ -69,13 +75,17 @@ class Heightmap:
             self.grid[x][y] = c
 
     def _subdivide(self, x1, y1, x2, y2):
-        """ subdivide the heightmap iterate (diamond square algorithm) """
-        # coordinates of central point
+        """ subdivide the heightmap iterate (diamond square algorithm)
+        x1;y1   -       -       -       x2;y1
+        -       -     ?x;y?     -       -
+        x1;y2   -       -       -       x2;y2
+        """
+        # determinates coordinates of central point (x;y)
         if not ((x2 - x1 < 2.0) and (y2 - y1 < 2.0)):
             x = int((x1 + x2) / 2)
             y = int((y1 + y2) / 2)
 
-            # average height of given points
+            # average height of given points (x1;y1 / x1;y2 / x2;y1 / x2;y2)
             v = int((self.grid[x1][y1] + self.grid[x2][y1] +
                      self.grid[x2][y2] + self.grid[x1][y2]) / 4)
             range_low, range_high = self.params.get('height_range')
@@ -85,11 +95,16 @@ class Heightmap:
                 v = range_high
             self.grid[x][y] = v
 
+            # calculate height of the side
+            # x1;y1   -      ?x;y1     -       x2;y1
+            # ?x1;y    -      x;y      -       ?x2;y
+            # x1;y2   -      ?x;y2     -       x2;y2
             self._adjust(x1, y1, x, y1, x2, y1)
             self._adjust(x2, y1, x2, y, x2, y2)
             self._adjust(x1, y2, x, y2, x2, y2)
             self._adjust(x1, y1, x1, y, x1, y2)
 
+            # redo for smaller square
             self._subdivide(x1, y1, x, y)
             self._subdivide(x, y1, x2, y)
             self._subdivide(x, y, x2, y2)
