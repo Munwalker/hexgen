@@ -17,12 +17,13 @@ class Heightmap:
         self.size = self.params.get('size')
         # get the grid (size*size) full of 0
         self.grid = np.zeros((self.size, self.size))
+        range_low, range_high = self.params.get('height_range')
 
-        # initialize corners of the world
-        self.grid[0][0] = random.randint(0, 255)
-        self.grid[self.size - 1][0] = random.randint(0, 255)
-        self.grid[0][self.size - 1] = random.randint(0, 255)
-        self.grid[self.size - 1][self.size - 1] = random.randint(0, 255)
+        # initialize corners of the map
+        self.grid[0][0] = random.randint(range_low, range_high)
+        self.grid[self.size - 1][0] = random.randint(range_low, range_high)
+        self.grid[0][self.size - 1] = random.randint(range_low, range_high)
+        self.grid[self.size - 1][self.size - 1] = random.randint(range_low, range_high)
 
         self._subdivide(0, 0, self.size - 1, self.size - 1)
 
@@ -60,18 +61,17 @@ class Heightmap:
             # height = average of the 2 known points * random negative or positive * d * world roughness
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
                 + (random.random() - 0.5) * d * roughness
-            c = int(math.fabs(v) % 257)
+            c = int(math.fabs(v)) # % 256)
             # Acceleration : avoid calculates twice
             if y == 0:
                 self.grid[x][self.size - 1] = c
             if x == 0 or x == self.size - 1:
                 if y < self.size - 1:
                     self.grid[x][self.size - 1 - y] = c
+            # ensure height is in given range
             range_low, range_high = self.params.get('height_range')
-            if c < range_low:
-                c = range_low
-            elif c > range_high:
-                c = range_high
+            c = max(range_low, c)
+            c = min(range_high, c)
             self.grid[x][y] = c
 
     def _subdivide(self, x1, y1, x2, y2):
@@ -88,11 +88,10 @@ class Heightmap:
             # average height of given points (x1;y1 / x1;y2 / x2;y1 / x2;y2)
             v = int((self.grid[x1][y1] + self.grid[x2][y1] +
                      self.grid[x2][y2] + self.grid[x1][y2]) / 4)
+            # ensure height is in given range
             range_low, range_high = self.params.get('height_range')
-            if v < range_low:
-                v = range_low
-            elif v > range_high:
-                v = range_high
+            v = max(range_low, v)
+            v = min(range_high, v)
             self.grid[x][y] = v
 
             # calculate height of the side
