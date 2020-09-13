@@ -1,11 +1,7 @@
-import uuid
 import copy
 import json
-import math
 import random
 import sys
-sys.setrecursionlimit(10000)
-
 from hexgen.constants import *
 from hexgen.territory import Territory
 from hexgen.enums import OceanType, HexResourceType, HexResourceRating, MapType, Hemisphere, GeoformType
@@ -14,7 +10,11 @@ from hexgen.heightmap import Heightmap
 from hexgen.grid import Grid
 from hexgen.calendar import Calendar
 from hexgen.util import decide_wind, pressure_at_seasons, Timer, is_isthmus, \
-                        is_bay, is_strait, first_hex_without_geoform, is_peninsula
+    is_bay, is_strait, first_hex_without_geoform, is_peninsula
+from hexgen.river import RiverSegment
+from hexgen.hex import Hex, HexSide, HexFeature
+
+sys.setrecursionlimit(10000)
 
 default_params = {
     "map_type": MapType.terran,
@@ -46,8 +46,6 @@ default_params = {
 
 
 class MapGen:
-    """ generates a heightmap as an array of integers between 1 and 255
-    using the diamond-square algorithm"""
 
     def __init__(self, params, debug=False):
         """ initialize """
@@ -57,8 +55,7 @@ class MapGen:
         if debug:
             print("Making world with params:")
             for key, value in params.items():
-                print("\t{}:\t{}".format(key, value))
-
+                print(f"\t{key}:\t{value}")
 
         self.debug = debug
 
@@ -66,13 +63,14 @@ class MapGen:
             random.seed(params.get('random_seed'))
 
         with Timer("Building Heightmap", self.debug):
-            self.heightmap = Heightmap(self.params, self.debug)
+            self.heightmap: Heightmap = Heightmap(self.params, self.debug)
+
+        if self.debug is True:
+            print(f"\tAverage Height: {self.heightmap.average_height}")
+            print(f"\tHighest Height: {self.heightmap.highest_height}")
+            print(f"\tLowest Height: {self.heightmap.lowest_height}")
 
         self.hex_grid = Grid(self.heightmap, self.params)
-        if self.debug is True:
-            print("\tAverage Height: {}".format(self.hex_grid.average_height))
-            print("\tHighest Height: {}".format(self.hex_grid.highest_height))
-            print("\tLowest Height: {}".format(self.hex_grid.lowest_height))
 
         print("Making calendar")
         self.calendar = Calendar(self.params.get('year_length'), self.params.get('day_length'))
@@ -85,7 +83,6 @@ class MapGen:
 
         self._generate_pressure()
 
-
         if self.params.get('hydrosphere'):
             self._generate_rivers()
 
@@ -94,7 +91,7 @@ class MapGen:
             print("Making coastal moisture") if self.debug else False
             for y, row in enumerate(self.hex_grid.grid):
                 for x, col in enumerate(row):
-                    hex = self.hex_grid.grid[x][y]
+                    hex: Hex = self.hex_grid.grid[x][y]
                     if hex.is_land:
                         if hex.distance <= 5:
                             hex.moisture += 1
@@ -109,12 +106,12 @@ class MapGen:
         if self.params.get('hydrosphere') is False or self.params.get('sea_percent') == 100:
             num_aquifers = 0
 
-        print("Making {} aquifers".format(num_aquifers)) if self.debug else False
+        print(f"Making {num_aquifers} aquifers") if self.debug else False
         aquifers = []
         while len(aquifers) < num_aquifers:
             rx = random.randint(0, len(self.hex_grid.grid) - 1)
             ry = random.randint(0, len(self.hex_grid.grid) - 1)
-            hex = self.hex_grid.grid[rx][ry]
+            hex: Hex = self.hex_grid.grid[rx][ry]
             if hex.is_land and hex.moisture < 5:
                 aquifers.append(hex)
 
@@ -140,14 +137,14 @@ class MapGen:
 
             # decide number of craters
             num_craters = random.randint(0, 15)
-            print("Making {} craters".format(num_craters))
+            print(f"Making {num_craters} craters")
             craters = []
 
             while len(craters) < num_craters:
                 size = random.randint(1, 3)
                 craters.append(dict(hex=random.choice(self.hex_grid.hexes),
                                     size=size,
-                                    depth= 10 * size))
+                                    depth=10 * size))
 
             for crater in craters:
 
@@ -175,19 +172,19 @@ class MapGen:
                         h.add_feature(HexFeature.crater)
                         h.altitude = center_hex.altitude - 15
                         h.altitude = max(h.altitude, 0)
-                for h in hexes[:round(len(hexes)/3)]:
+
+                for h in hexes[:round(len(hexes) / 3)]:
                     for i in h.surrounding:
                         if i.has_feature(HexFeature.crater) is False:
                             i.add_feature(HexFeature.crater)
                             i.altitude = center_hex.altitude - 20
                             i.altitude = max(i.altitude, 0)
 
-
         # volcanoes
         if self.params.get('volcanoes'):
 
             num_volcanoes = random.randint(0, 10)
-            print("Making {} volcanoes".format(num_volcanoes))
+            print(f"Making {num_volcanoes} volcanoes")
             volcanoes = []
             while len(volcanoes) < num_volcanoes:
                 center_hex = random.choice(self.hex_grid.hexes)
@@ -200,7 +197,7 @@ class MapGen:
                 height = volcano.get('height')
                 size = volcano.get('size')
                 center_hex = volcano.get('hex')
-                print("\tVolcano: Size: {}, Height: {}".format(size, height))
+                print(f"\tVolcano: Size: {size}, Height: {height}")
                 size_list = list(range(size))
                 size_list.reverse()
                 hexes = []
@@ -217,7 +214,7 @@ class MapGen:
                         h.add_feature(HexFeature.volcano)
 
                 last_altitude = 0
-                for h in hexes[:round(len(hexes)/2)]:
+                for h in hexes[:round(len(hexes) / 2)]:
                     for i in h.surrounding:
                         if i.has_feature(HexFeature.volcano) is False:
                             i.add_feature(HexFeature.volcano)
@@ -266,7 +263,7 @@ class MapGen:
         for h in self.hex_grid.hexes:
             for resource in combined:
                 chance = (resource.get('rating').rarity *
-                          resource.get('type').rarity * self.hex_grid.size / 1000 ) / (math.pow(self.hex_grid.size, 2))
+                          resource.get('type').rarity * self.hex_grid.size / 1000) / (math.pow(self.hex_grid.size, 2))
                 given = random.uniform(0, 1)
                 if given <= chance:
                     h.resource = resource
@@ -280,7 +277,7 @@ class MapGen:
         num_territories = self.params.get('num_territories')
 
         # give each a land pixel to start
-        print("Making {} territories".format(num_territories)) if self.debug else False
+        print(f"Making {num_territories} territories") if self.debug else False
 
         c = 0
         if num_territories == 0:
@@ -297,7 +294,7 @@ class MapGen:
         # loop over each, adding hexes
         total_hexes = self.hex_grid.size * self.hex_grid.size
         count = 0
-        while count < total_hexes:  #  i in range(0, 15):
+        while count < total_hexes:  # i in range(0, 15):
             count = 0
             # print("Start: {} < {}".format(count, total_hexes))
             territories = self.territories
@@ -336,7 +333,7 @@ class MapGen:
             pick_top = None
             pick_bottom = None
             if len(top) > 0:
-                print("Merging {} territories from the top of the map".format( len(top) ))
+                print(f"Merging {len(top)} territories from the top of the map")
                 pick_top = random.choice(top)
                 top.remove(pick_top)
                 for t in self.territories:
@@ -345,7 +342,7 @@ class MapGen:
                         t.members = []
 
             if len(bottom) > 0:
-                print("Merging {} territories from the bottom of the map".format( len(bottom) ))
+                print(f"Merging {len(bottom)} territories from the bottom of the map")
                 pick_bottom = random.choice(bottom)
                 bottom.remove(pick_bottom)
                 for t in self.territories:
@@ -363,10 +360,10 @@ class MapGen:
 
             self.territories = [t for t in self.territories if t is not None]
 
-            print("{} empty territories being deleted".format(len([t for t in self.territories if len(t.members) == 0])))
+            print(f"{len([t for t in self.territories if len(t.members) == 0])} empty territories being deleted")
             self.territories = [t for t in self.territories if len(t.members) > 0]
 
-            print("There are now {} territories".format(len(self.territories)))
+            print(f"There are now {len(self.territories)} territories")
 
         print("Splitting territories into contiguous blocks") if self.debug else False
         for t in self.territories:
@@ -403,14 +400,12 @@ class MapGen:
                     numbers.append(count)
                     count = 1
 
-
                     north_east = h.hex_north_east
                     while north_east.is_land is True and count < self.hex_grid.size * 2:
                         north_east = north_east.hex_north_east
                         count += 1
                     numbers.append(count)
                     count = 1
-
 
                     north_west = h.hex_north_west
                     while north_west.is_land is True and count < self.hex_grid.size * 2:
@@ -419,7 +414,6 @@ class MapGen:
 
                     numbers.append(count)
                     count = 1
-
 
                     south_west = h.hex_south_west
                     while south_west.is_land is True and count < self.hex_grid.size * 2:
@@ -446,7 +440,7 @@ class MapGen:
                 pressure_diff = random.randint(3, 5)
                 for y, row in enumerate(self.hex_grid.grid):
                     for x, col in enumerate(row):
-                        h = self.hex_grid.grid[x][y]
+                        h: Hex = self.hex_grid.grid[x][y]
 
                         # end_year is winter, mid_year is summer
                         if h.is_land:
@@ -454,7 +448,7 @@ class MapGen:
                             end_year = pressure_at_seasons(h.latitude, base_pressure, pressure_diff, -max_shift)
                             mid_year = pressure_at_seasons(h.latitude, base_pressure, pressure_diff, max_shift)
                         else:
-                            max_shift = min(6, 0.005 * round(self.hex_grid.sealevel - h.latitude))
+                            max_shift = min(6, round(0.005 * round(self.hex_grid.sealevel - h.latitude)))
                             end_year = pressure_at_seasons(h.latitude, base_pressure, pressure_diff, -max_shift)
                             mid_year = pressure_at_seasons(h.latitude, base_pressure, pressure_diff, max_shift)
                         h.pressure = (end_year, mid_year)
@@ -471,20 +465,20 @@ class MapGen:
                     if h.hemisphere is Hemisphere.northern:
                         # winter / increase
                         # summer / decrease
-                        return (h.pressure[0] + incr, h.pressure[1] - incr)
+                        return h.pressure[0] + incr, h.pressure[1] - incr
                     elif h.hemisphere is Hemisphere.southern:
                         # winter / decrease
                         # summer / increase
-                        return (h.pressure[0] - incr, h.pressure[1] + incr)
+                        return h.pressure[0] - incr, h.pressure[1] + incr
                 else:
                     if h.hemisphere is Hemisphere.northern:
                         # winter / decrease
                         # summer / increase
-                        return (h.pressure[0] - incr, h.pressure[1] + incr)
+                        return h.pressure[0] - incr, h.pressure[1] + incr
                     elif h.hemisphere is Hemisphere.southern:
                         # winter / increase
                         # summer / decrease
-                        return (h.pressure[0] + incr, h.pressure[1] - incr)
+                        return h.pressure[0] + incr, h.pressure[1] - incr
                     # return (h.pressure[0], h.pressure[1])
 
             def brush(percent, incr):
@@ -555,7 +549,6 @@ class MapGen:
                 next_hex = downstream_hex.wind[season_index].get('windward_hex')
                 windgust(season_index, next_hex, loops - 1)
 
-
         with Timer("Generating Temperature Changes", self.debug):
             for y, row in enumerate(self.hex_grid.grid):
                 for x, col in enumerate(row):
@@ -566,7 +559,6 @@ class MapGen:
 
                     # mid year
                     windgust(1, h)
-
 
     def _generate_rivers(self):
         """
@@ -590,7 +582,7 @@ class MapGen:
         """
         land_percent = 100 - self.params.get('sea_percent')
         num_rivers = self.params.get('num_rivers')
-        print("Making {} rivers".format(num_rivers)) if self.debug else False
+        print(f"Making {num_rivers} rivers") if self.debug else False
 
         while len(self.rivers_sources) < num_rivers:
             rx = random.randint(0, self.hex_grid.size - 1)
@@ -602,13 +594,13 @@ class MapGen:
                 #     # don't place rivers above +35 altitude when the temperature is below zero
                 #     continue
                 random_side = random.choice(list(HexSide))
-                #print("Placing river source at {}, {}".format(rx, ry))
+                # print(f"Placing river source at {rx}, {ry}")
                 self.rivers_sources.append(RiverSegment(self.hex_grid, rx, ry, random_side, True))
 
         print("Placed river sources") if self.debug else False
 
-        for r in self.rivers_sources: # loop over each source segment
-            segment = r # river segment we are looking at
+        for r in self.rivers_sources:  # loop over each source segment
+            segment = r  # river segment we are looking at
             finished = False
             last_unselected = None
             # we stop only when one of two things happen:
@@ -706,7 +698,8 @@ class MapGen:
 
                     # make a new source river at an outer edge of the lake
                     # chosen_edge = random.choice(lake.outer_edges)
-                    # self.rivers_sources.append(RiverSegment(self.hex_grid, chosen_edge.one.x, chosen_edge.one.y, chosen_edge.side, True))
+                    # self.rivers_sources.append(RiverSegment(self.hex_grid, chosen_edge.one.x, chosen_edge.one.y,
+                    # chosen_edge.side, True))
 
                     finished = True
 
@@ -749,7 +742,7 @@ class MapGen:
                             h.geoform_type = GeoformType.peninsula
 
                         if h.geoform_type is not None:
-                            self.geoforms.append(Geoform(set([h]), h.geoform_type))
+                            self.geoforms.append(Geoform({h}, h.geoform_type))
 
             def flood(found, current, hex_type):
                 """ Do a flood fill at this hex over all hexes of this type without geoforms """
@@ -810,6 +803,7 @@ class MapGen:
                         ng = [n[1].geoform for n in h.neighbors if n[1].geoform is not geoform]
                         geoform.neighbors.update(ng)
                     assert geoform not in geoform.neighbors, 'A Geoform should not be in its own neighbors set'
+
             calculate_neighbors()
 
             with Timer("\tMerging geoforms", self.debug):
@@ -819,7 +813,7 @@ class MapGen:
                     for neighbor in geoform.neighbors:
                         if geoform.type is neighbor.type:
                             # remove neighbor
-                            print('Merging {} '.format(geoform.type))
+                            print(f"Merging {geoform.type} ")
                             geoform.merge(neighbor)
 
                 calculate_neighbors()
@@ -835,14 +829,14 @@ class MapGen:
                                                                GeoformType.large_island])
 
                         if len(islands) == 1 and len(land_form) == 1 and \
-                            len(land_form[0].neighbors) >= 2:
+                                len(land_form[0].neighbors) >= 2:
                             other_isthmuses = len(islands[0].neighbor_of_type(GeoformType.isthmus)) > 1
                             # check to see if this island has other isthmuses
                             # if it does, exclude it
                             if other_isthmuses is False:
-                                print('Merging island + isthmus into peninsula')
-                                islands[0].merge(geoform) # merge the island and the isthmus
-                                islands[0].type = GeoformType.peninsula # change island to peninsula
+                                print("Merging island + isthmus into peninsula")
+                                islands[0].merge(geoform)  # merge the island and the isthmus
+                                islands[0].type = GeoformType.peninsula  # change island to peninsula
 
                 calculate_neighbors()
 
@@ -852,18 +846,16 @@ class MapGen:
                     if geoform.type is GeoformType.small_island:
                         large_islands = geoform.neighbor_of_type(GeoformType.large_island)
                         if len(large_islands) > 0:
-                            print('Merging small island into large island')
+                            print("Merging small island into large island")
                             large_islands[0].merge(geoform)
 
                 calculate_neighbors()
-
-
 
                 # islands separated by an isthmus with a continent should be merged
                 # TODO: maybe large islands should be a new continent
                 for geoform in self.geoforms:
                     if geoform.type is GeoformType.large_island or \
-                       geoform.type is GeoformType.small_island:
+                            geoform.type is GeoformType.small_island:
                         isthmuses = geoform.neighbor_of_type(GeoformType.isthmus)
                         continents = set()
                         for i in isthmuses:
@@ -871,11 +863,11 @@ class MapGen:
                         continents = list(continents)
                         if len(continents) == 1:
                             # one continent neighbor
-                            print('Merging island into continent')
+                            print("Merging island into continent")
                             continents[0].merge(geoform)
                         elif len(continents) > 1:
                             # multiple continents are neighbors
-                            print('Merging island and other continents into one continent')
+                            print("Merging island and other continents into one continent")
                             continents[0].merge(geoform)
                             for c in continents[1:]:
                                 continents[0].merge(c)
@@ -887,7 +879,7 @@ class MapGen:
                     if geoform.type is GeoformType.peninsula:
                         isthmuses = geoform.neighbor_of_type(GeoformType.isthmus)
                         if len(isthmuses) == 1:
-                            print('Merging isthmus into peninsula')
+                            print("Merging isthmus into peninsula")
                             geoform.merge(isthmuses[0])
 
                         # a peninsula of size 2 with no neighbors is an island
@@ -897,9 +889,9 @@ class MapGen:
                 calculate_neighbors()
 
                 # remove old geoforms
-            print("Deleting {} geoforms".format(len([g for g in self.geoforms if g.to_delete is True])))
+            print(f"Deleting {len([g for g in self.geoforms if g.to_delete is True])} geoforms")
             self.geoforms = [g for g in self.geoforms if g.to_delete is False]
-            print("There is now {} geoforms".format(len(self.geoforms)))
+            print(f"There is now {len(self.geoforms)} geoforms")
 
     def is_river(self, edge):
         """
@@ -941,12 +933,14 @@ class MapGen:
                 "hexes": [],
                 "geoforms": []
             }
+
             def edge_dict(edge):
                 return dict(
                     is_river=edge.is_river,
                     is_coast=edge.is_coast,
                     direction=edge.direction.name
                 )
+
             for x, row in enumerate(self.hex_grid.grid):
                 row_data = []
                 for y, col in enumerate(row):
@@ -992,6 +986,3 @@ class MapGen:
             with Timer("Writing data to JSON file", self.debug):
                 json.dump(data, outfile)
         return data
-
-from hexgen.river import RiverSegment
-from hexgen.hex import Hex, HexSide, HexFeature
