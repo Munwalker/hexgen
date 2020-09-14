@@ -61,7 +61,7 @@ class Heightmap:
             # height = average of the 2 known points * random negative or positive * d * world roughness
             v = (self.grid[xa][ya] + self.grid[xb][yb]) / 2.0 \
                 + (random.random() - 0.5) * d * roughness
-            c = int(math.fabs(v)) # % 256)
+            c = int(math.fabs(v))  # % 256)
 
             # Acceleration : avoid calculates twice
             # if y == 0:

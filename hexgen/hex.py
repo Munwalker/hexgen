@@ -1,15 +1,14 @@
 import uuid
-import math
 import random
-from enum import Enum
-
 from hexgen.constants import *
 from hexgen.enums import Biome, MapType, HexType, HexFeature, HexSide, Zones, Hemisphere, HexEdge
-from hexgen.util import blend_colors, lighten, randomize_color, pressure_at_seasons, decide_wind, is_opposite_hex, memoized
+from hexgen.grid import Grid
+from hexgen.util import blend_colors, lighten, randomize_color
+from hexgen.edge import Edge
 
 
 class Hex:
-    def __init__(self, grid, x, y, altitude):
+    def __init__(self, grid: Grid, x: int, y: int, altitude):
         self.x = x
         self.y = y
         self.altitude = altitude
@@ -22,11 +21,11 @@ class Hex:
         self.edge_north_west = None
         self.edge_south_west = None
 
-        self.distance = 0 # distance in hexes to the coast. 0 if no coast
+        self.distance = 0  # distance in hexes to the coast. 0 if no coast
         self.moisture = 0
 
         self.territory = None
-        self.marked = False # marked by the grouping algorithm
+        self.marked = False  # marked by the grouping algorithm
 
         self.bubble_cache = dict()
 
@@ -44,7 +43,7 @@ class Hex:
         world_pressure = self.grid.params.get('surface_pressure')
         self.pressure = (world_pressure, world_pressure)
         self.wind = None
-        self.wind_temp_effect = [0, 0] # Seasonal tuple. Temp changes from pressure and wind
+        self.wind_temp_effect = [0, 0]  # Seasonal tuple. Temp changes from pressure and wind
 
         # instance of a sea
         self.sea = None
@@ -161,7 +160,6 @@ class Hex:
             ratio = (1 - ratio) / 0.5
         return ratio
 
-
     @property
     def hemisphere(self):
         if self.x <= round(self.grid.size / 2):
@@ -172,10 +170,10 @@ class Hex:
     def latitude(self):
         """ Hex's current Latitude. Negative is south, positive is north """
         ratio = self.x / self.grid.size
-        if ratio < 0.5: # north
+        if ratio < 0.5:  # north
             return (1 - ratio / 0.5) * 90
-        else: # south
-            return ((ratio ) / 0.5) * -90 + 90
+        else:  # south
+            return (ratio / 0.5) * -90 + 90
 
     @property
     def zone(self):
@@ -224,7 +222,7 @@ class Hex:
         # part1 includes latitude only
         part1 = (abs(min_temp) + (avg_temp + volitility)) * ratio + min_temp
         # return (part1, part1)
-        #print(base_temp, avg_temp, volitility, min_temp, ratio, part1)
+        # print(base_temp, avg_temp, volitility, min_temp, ratio, part1)
         #       43         73          16         57
 
         # part2 includes altitude
@@ -232,7 +230,7 @@ class Hex:
         if self.is_water:
             factor = 8
         part2 = abs(self.altitude - self.grid.sealevel) / factor
-        return (round(part1, 2) - round(part2, 2), round(part1, 2) - round(part2, 2))
+        return round(part1, 2) - round(part2, 2), round(part1, 2) - round(part2, 2)
 
     @property
     def temperature(self):
@@ -241,7 +239,6 @@ class Hex:
             self.base_temperature[1] + self.wind_temp_effect[1],
         )
 
-
     @property
     def biome(self):
         """
@@ -249,10 +246,10 @@ class Hex:
         :return: Biome
         """
         map_type = self.grid.params.get('map_type')
-        if map_type is MapType.barren: # barren
-            if self.grid.params.get('pressure') < 0.003: # trace atmosphere
+        if map_type is MapType.barren:  # barren
+            if self.grid.params.get('pressure') < 0.003:  # trace atmosphere
                 return Biome.barren
-            else: # small atmosphere
+            else:  # small atmosphere
                 # TODO: determine where to put ice caps based on atmospheric compounds
                 if self in self.grid.coldest_hexes and self.temperature < 0:
                     return Biome.barren_ice_caps
@@ -345,7 +342,6 @@ class Hex:
             else:
                 sur.append(self.grid.find_hex(self.x + 1, self.y + 1))
         return sur
-
 
     @property
     def hex_east(self):
@@ -476,11 +472,11 @@ class Hex:
                     return step(iteration + 1, temp)
                 else:
                     return hexes
+
             around.extend(step(0, around))
             final = list(set(around))
             self.bubble_cache[distance] = final
             return final
-
 
     @property
     def is_land(self):
@@ -589,7 +585,6 @@ class Hex:
     def __repr__(self):
         return "<HEX: X: {}, Y: {}, Z: {}>".format(self.x, self.y, self.altitude)
 
-
     @property
     def color_terrain(self):
         altitude = self.altitude
@@ -615,19 +610,19 @@ class Hex:
                 color = (0, 20, 170)
         else:
             if self.moisture < 5:
-                color = (199,177,56)
+                color = (199, 177, 56)
             elif self.moisture < 10:
-                color = (151,167,104)
+                color = (151, 167, 104)
             elif self.moisture < 15:
-                color = (128,163,128)
+                color = (128, 163, 128)
             elif self.moisture < 20:
-                color = (104,158,151)
+                color = (104, 158, 151)
             elif self.moisture < 25:
-                color = (80,153,175)
+                color = (80, 153, 175)
             elif self.moisture < 30:
-                color = (56,148,199)
+                color = (56, 148, 199)
             else:
-                color = (56,148,199)
+                color = (56, 148, 199)
 
         if self.has_feature(HexFeature.lake):
             color = (0, 0, 255)
@@ -660,6 +655,7 @@ class Hex:
                     return color
                 last_temp = temp
             return TEMPERATURE_COLORS[-1][1]
+
         return (
             color_temp(self.temperature[0]),
             color_temp(self.temperature[1])
@@ -667,7 +663,7 @@ class Hex:
 
     @property
     def color_satellite(self):
-        hex_grid = self.grid
+        # hex_grid = self.grid
         map_type = self.grid.params.get('map_type')
         if map_type is MapType.terran or map_type is MapType.oceanic:
             # if self.has_feature(HexFeature.lake):
@@ -743,6 +739,4 @@ class Hex:
         """ Returns a season dict representing the map color of the pressure at summer and winter"""
         end_year = round((self.pressure[0] - self.grid.params.get('surface_pressure'))) * 5
         mid_year = round((self.pressure[1] - self.grid.params.get('surface_pressure'))) * 5
-        return ((100 + end_year, 100, 100), (100 + mid_year, 100, 100))
-
-from hexgen.edge import Edge
+        return (100 + end_year, 100, 100), (100 + mid_year, 100, 100)
