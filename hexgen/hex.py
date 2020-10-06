@@ -288,7 +288,7 @@ class Hex:
             elif 20 < rain and 20 < temp:
                 return Biome.tropical_rainforest
 
-            raise Exception("Biome invalid Rainfall: {}, Temperature: {}".format(rain, temp))
+            raise Exception(f"Biome invalid Rainfall: {rain}, Temperature: {temp}")
 
         elif map_type is MapType.volcanic:
             if self.altitude < 60:
@@ -345,7 +345,7 @@ class Hex:
 
     @property
     def hex_east(self):
-        """ Returns the hex to the East or None if end of map"""
+        """ Returns the hex to the East or first hex of row if end of map """
         if self.y == self.max_size:
             return self.grid.find_hex(self.x, 0)
         else:
@@ -353,7 +353,7 @@ class Hex:
 
     @property
     def hex_west(self):
-        """ Returns the hex to the West or None if end of map"""
+        """ Returns the hex to the West or last hex of row if end of map"""
         if self.y == 0:
             return self.grid.find_hex(self.x, self.max_size)
         else:
@@ -363,8 +363,9 @@ class Hex:
     def hex_north_west(self):
         """ Returns the hex to the north west"""
         if self.x == 0:  # top of map
+            # how neighbor is picked ? makes no sense in case of an even sized map (middle hex is its own edge)
             return self.grid.find_hex(0, round(self.y / -1 + self.max_size))
-        elif self.y == 0 and self.x % 2 == 0:  # left of map and even
+        elif self.y == 0 and self.x % 2 == 0:  # left of map and even - return hex at the end of above row
             return self.grid.find_hex(self.x - 1, self.max_size)
         else:
             if self.x % 2 == 0:  # even
@@ -377,7 +378,7 @@ class Hex:
         """ Returns the hex to the North East or None if end of map"""
         if self.x == 0:  # top of map
             return self.grid.find_hex(0, round(self.y / -1 + self.max_size))
-        elif self.y == self.max_size and self.x % 2 == 1:  # right of map and x is odd
+        elif self.y == self.max_size and self.x % 2 == 1:  # right of map and x is odd - return first hex of above row
             return self.grid.find_hex(self.x - 1, 0)
         else:
             if self.x % 2 == 0:  # even
@@ -390,8 +391,8 @@ class Hex:
         """ Returns the hex to the South West or None if end of map"""
         if self.x == self.max_size:  # bottom of map
             return self.grid.find_hex(self.max_size, round(self.y / -1 + self.max_size))
-        elif self.y == 0 and self.x % 2 == 1:  # left of map and x is odd
-            return self.grid.find_hex(self.x - 1, self.max_size)
+        elif self.y == 0 and self.x % 2 == 0:  # left of map and x is even - return first hex of below row
+            return self.grid.find_hex(self.x + 1, self.max_size)
         else:
             if self.x % 2 == 0:  # even
                 return self.grid.find_hex(self.x + 1, self.y - 1)
@@ -583,7 +584,7 @@ class Hex:
                 self.edge_south_west, self.edge_south_east]
 
     def __repr__(self):
-        return "<HEX: X: {}, Y: {}, Z: {}>".format(self.x, self.y, self.altitude)
+        return f"<HEX: X: {self.X}, Y: {self.Y}, Z: {self.altitude}>"
 
     @property
     def color_terrain(self):

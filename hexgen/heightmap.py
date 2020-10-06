@@ -82,7 +82,7 @@ class Heightmap:
         -       -     ?x;y?     -       -
         x1;y2   -       -       -       x2;y2
         """
-        # determinates coordinates of central point (x;y)
+        # determines coordinates of central point (x;y)
         if not ((x2 - x1 < 2.0) and (y2 - y1 < 2.0)):
             x = int((x1 + x2) / 2)
             y = int((y1 + y2) / 2)
