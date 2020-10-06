@@ -6,11 +6,12 @@ from hexgen.constants import *
 from hexgen.enums import GeoformType
 from hexgen.draw import HexGridDraw
 
+
 # @exec_time
 def draw_grid(hex_grid):
     def color_heightmap(h):
         alt = int(h.altitude)
-        return (alt, alt, alt)
+        return alt, alt, alt
 
     # make terrain map
     def color_terrain(h):
@@ -42,17 +43,17 @@ def draw_grid(hex_grid):
 
     def color_features(h):
         if h.has_feature(HexFeature.lava_flow):
-            return (200, 100, 0)
+            return 200, 100, 0
         if h.has_feature(HexFeature.volcano):
-            return (255, 0, 0)
+            return 255, 0, 0
         if h.has_feature(HexFeature.crater):
-            return (255, 255, 0)
-        return (200, 200, 200)
+            return 255, 255, 0
+        return 200, 200, 200
 
     def color_resources(h):
         if h.resource is not None:
             return h.resource.get('type').color
-        return (100, 100, 100)
+        return 100, 100, 100
 
     def color_zone(h):
         return h.zone.color
@@ -95,14 +96,14 @@ def draw_grid(hex_grid):
 
     def color_hex_type(h):
         if h.is_land:
-            return (0, 255, 0)
-        return (0, 0, 255)
+            return 0, 255, 0
+        return 0, 0, 255
 
     def color_geoforms(h):
         for g in GeoformType.list():
             if h.geoform.type is g:
                 return g.color
-        return (0, 0, 255)
+        return 0, 0, 255
 
     HexGridDraw(hex_grid, color_features, "../output/map_features.png", show_coasts=True, rivers=False)
     HexGridDraw(hex_grid, color_heightmap, "../output/map_height.png", rivers=False, show_coasts=True)

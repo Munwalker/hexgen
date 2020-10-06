@@ -1,5 +1,5 @@
-from enum import Enum
 import uuid
+from hexgen.enums import EdgeDirection
 
 
 class Edge:
@@ -19,8 +19,8 @@ class Edge:
         self.is_river = False
 
     def __repr__(self):
-        return "<Edge Side: {}, One: {}, Two: {}, " \
-               "Down: {}, delta: {}, direction: {}>".format(self.side, self.one, self.two, self.down, self.delta, self.direction)
+        return f"<Edge Side: {self.side}, One: {self.one}, Two: {self.two}, " \
+               f"Down: {self.down}, delta: {self.delta}, direction: {self.direction}>"
 
     @property
     def is_coast(self):
@@ -61,7 +61,3 @@ class Edge:
         Eg: A Hex's south-east is equal to the bottom-left's north-west
         """
         return other.one == self.two or (self.one == other.one and self.two == other.two)
-
-from hexgen.hex import HexSide
-
-from hexgen.enums import EdgeDirection
