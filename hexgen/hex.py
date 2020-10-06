@@ -394,8 +394,8 @@ class Hex:
         """ Returns the hex to the South West or None if end of map"""
         if self.x == self.max_size:  # bottom of map
             return self.grid.find_hex(self.max_size, round(self.y / -1 + self.max_size))
-        elif self.y == 0 and self.x % 2 == 1:  # left of map and x is odd
-            return self.grid.find_hex(self.x - 1, self.max_size)
+        elif self.y == 0 and self.x % 2 == 0:  # left of map and x is even
+            return self.grid.find_hex(self.x + 1, self.max_size)
         else:
             if self.x % 2 == 0:  # even
                 return self.grid.find_hex(self.x + 1, self.y - 1)
