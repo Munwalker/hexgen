@@ -2,13 +2,12 @@ import uuid
 import random
 from hexgen.constants import *
 from hexgen.enums import Biome, MapType, HexType, HexFeature, HexSide, Zones, Hemisphere, HexEdge
-from hexgen.grid import Grid
 from hexgen.util import blend_colors, lighten, randomize_color
 from hexgen.edge import Edge
 
 
 class Hex:
-    def __init__(self, grid: Grid, x: int, y: int, altitude):
+    def __init__(self, grid, x: int, y: int, altitude):
         self.x = x
         self.y = y
         self.altitude = altitude
