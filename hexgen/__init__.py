@@ -131,23 +131,22 @@ def draw_grid(hex_grid):
                 rivers=False, show_coasts=True)
     # report on territories
     for t in hex_grid.territories:
-        print("Territory {}:\n"
-              "\tSize: {}\n"
-              "\tColor: {}\n"
-              "\tLandlocked: {}\n"
-              "\tAverage Temperature: {}\n"
-              "\tAverage Moisture: {}\n"
-              "\tNeighbors: {}"
-              .format(t.id, t.size, t.color, t.landlocked, t.avg_temp, t.avg_moisture,
-                      t.neighbors))
+        print(f"Territory {t.id}:\n"
+              f"\tSize: {t.size}\n"
+              f"\tColor: {t.color}\n"
+              f"\tLandlocked: {t.landlocked}\n"
+              f"\tAverage Temperature: {t.avg_temp}\n"
+              f"\tAverage Moisture: {t.avg_moisture}\n"
+              f"\tNeighbors: {t.neighbors}")
         print("\tBiomes:")
         for b in t.biomes:
-            print("\t - {}: {} - {}%".format(b.get('biome').title,
-                                             b.get('count'),
-                                             round((b.get('count') / t.size) * 100, 2)))
-        print("\tGroups: {}".format(len(t.groups)))
+            print(f"\t - {b.get('biome').title}: {b.get('count')} - {round((b.get('count') / t.size) * 100, 2)}%")
+        print(f"\tGroups: {len(t.groups)}")
         for g in t.groups:
-            print("\t\tHexes: {}, X: {}, Y: {}".format(g.get('size'), g.get('x'), g.get('y')))
+            print(f"\t\tHexes: {g.get('size')}, X: {g.get('x')}, Y: {g.get('y')}")
+    HexGridDraw(hex_grid, color_wind_mid_year, "../output/map_wind_mid_year.png", text_func=wind_display_mid_year,
+                rivers=False, show_coasts=True)
+    # report on territories
 
 # @exec_time
 # def save_grid(colony, hex_grid, debug=False):

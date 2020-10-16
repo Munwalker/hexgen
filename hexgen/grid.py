@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from typing import List
 from hexgen.heightmap import Heightmap
 from hexgen.hex import Hex
 
@@ -26,8 +27,8 @@ class Grid:
         self.avg_altitude = 0
         self.num_ocean_hexes = 0
 
-        self.hexes = []
-        self.coldest_hexes = []
+        self.hexes: List[Hex] = []
+        self.coldest_hexes: List[Hex] = []
 
         if debug:
             print("Making grid")
