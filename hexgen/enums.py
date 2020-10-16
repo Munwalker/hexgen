@@ -164,7 +164,8 @@ class MapType(SuperEnum):
     gas = (3, "Gas", None)
     volcanic = (4, "Volcanic", TERRAIN_BARREN)
     oceanic = (5, "Oceanic", TERRAIN_OCEANIC)
-    glacial = (6, "Barren", TERRAIN_BARREN)
+    glacial = (6, "Glacial", TERRAIN_BARREN)
+
 
 class HexType(Enum):
     land = "Land"  # hex over or at sealevel
