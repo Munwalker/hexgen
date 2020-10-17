@@ -1,6 +1,7 @@
 import math
 import random
 
+
 class Month:
 
     def __init__(self, ordinal, num_days, day_length):
@@ -9,9 +10,9 @@ class Month:
         self.day_length = day_length
 
     def __repr__(self):
-        return "<Month ordinal={} " \
-                "num_days={} " \
-                "day_length={}>".format(self.ordinal, self.num_days, self.day_length)
+        return f"<Month ordinal={self.ordinal} " \
+               f"num_days={self.num_days} " \
+               f"day_length={self.day_length}>"
 
 
 class Calendar:
@@ -25,20 +26,17 @@ class Calendar:
         # determine the number of months
         # split the year_length into twelve months with an integer number of days
         # each month should have around 30 days
-        if month_length_target is None:
+        if not month_length_target:
             if year_length > 35:
                 month_length_target = random.randint(25, 35)
             else:
                 month_length_target = year_length / 2
-        # print("Target length of month: {}".format(month_length_target))
+        # print(f"Target length of month: {month_length_target}")
 
-        found_month_number = year_length
-        while(math.floor(year_length / found_month_number) < month_length_target):
-            num_months = found_month_number
-            found_month_number -= 1
-        # print("Number of months: {}".format(num_months))
+        num_months = round(year_length / month_length_target)
+        # print(f"Number of months: {num_months}")
         even_split = year_length / num_months
-        # print("Length of each month if split evenly: {}".format(even_split))
+        # print(f"Length of each month if split evenly: {even_split}")
 
         days_left = year_length
         even_split = math.floor(even_split)
@@ -48,10 +46,13 @@ class Calendar:
                 num_days = days_left
             else:
                 num_days = even_split
-            self.months.append( Month(num, num_days, day_length) )
+            self.months.append(Month(num, num_days, day_length))
             days_left -= even_split
 
-        # print('total', sum([x.num_days for x in self.months]))
+        # for month in self.months:
+        #     print(f"{month}")
+        # print(f"total: {sum([x.num_days for x in self.months])}")
+
 
 #
 # import pprint
